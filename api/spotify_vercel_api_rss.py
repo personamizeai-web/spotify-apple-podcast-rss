@@ -1,11 +1,16 @@
 from http.server import BaseHTTPRequestHandler
 from db import supabase
-
 import html
 from email.utils import formatdate
 
 
 class handler(BaseHTTPRequestHandler):
+
+    # ✅ FIX 1: ADD HEAD SUPPORT (IMPORTANT)
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Content-type", "application/xml")
+        self.end_headers()
 
     def do_GET(self):
 
@@ -13,12 +18,14 @@ class handler(BaseHTTPRequestHandler):
 
             current_date = formatdate(usegmt=True)
 
-            data = supabase.table("news") \
-                .select("*") \
-                .eq("is_audio_generated", True) \
-                .order("id", desc=True) \
-                .limit(50) \
+            data = (
+                supabase.table("news")
+                .select("*")
+                .eq("is_audio_generated", True)
+                .order("id", desc=True)
+                .limit(50)
                 .execute()
+            )
 
             rows = data.data
 
@@ -46,7 +53,7 @@ class handler(BaseHTTPRequestHandler):
 <item>
 <title>{title}</title>
 <description>{title}</description>
-<enclosure url="{audio_url}" length="7200000" type="audio/mpeg"/>
+<enclosure url="{audio_url}" type="audio/mpeg" />
 <guid isPermaLink="false">{audio_url}</guid>
 <pubDate>{current_date}</pubDate>
 <itunes:duration>03:00</itunes:duration>
@@ -77,7 +84,7 @@ xmlns:atom="http://www.w3.org/2005/Atom">
 
 <itunes:owner>
 <itunes:name>AI Podcast</itunes:name>
-<itunes:email>mediatajdemo@gmail.com</itunes:email>
+<itunes:email>personamize.ai@gmail.com</itunes:email>
 </itunes:owner>
 
 <itunes:image href="https://oklpimfespctlovlijzn.supabase.co/storage/v1/object/public/spotify-apple-podcast-bg-image/cover.jpg"/>
@@ -91,7 +98,7 @@ xmlns:atom="http://www.w3.org/2005/Atom">
 """
 
             self.send_response(200)
-            self.send_header("Content-type", "application/rss+xml; charset=utf-8")
+            self.send_header("Content-type", "application/xml; charset=utf-8")
             self.end_headers()
             self.wfile.write(rss_feed.encode("utf-8"))
 
