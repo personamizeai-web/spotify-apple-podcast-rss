@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler
-from db import supabase
+from spotifyappledb import supabase
 import html
 from email.utils import formatdate
 
