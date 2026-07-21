@@ -114,9 +114,13 @@ class handler(BaseHTTPRequestHandler):
 <description>AI powered automotive news podcast</description>
 <language>en-us</language>
 <itunes:type>episodic</itunes:type>
-<itunes:author>Auto Intel Daily</itunes:author>
+<itunes:author>Auto Intel</itunes:author>
 <itunes:category text="Technology"/>
 <itunes:explicit>false</itunes:explicit>
+<itunes:owner>
+    <itunes:name>Auto Intel</itunes:name>
+    <itunes:email>personamize.ai@gmail.com</itunes:email>
+</itunes:owner>
 <itunes:image href="https://oklpimfespctlovlijzn.supabase.co/storage/v1/object/public/spotify-apple-podcast-bg-image/cover.jpg"/>
 <lastBuildDate>{current_date}</lastBuildDate>
 
