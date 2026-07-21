@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler
 from spotifyappledb import supabase
 import html
 from email.utils import formatdate
+from datetime import datetime
 
 
 class handler(BaseHTTPRequestHandler):
@@ -24,7 +25,8 @@ class handler(BaseHTTPRequestHandler):
                     spotify_title,
                     spotify_description,
                     audio_url,
-                    is_audio_generated
+                    is_audio_generated,
+                    created_at
                 """)
                 .eq("is_audio_generated", True)
                 .order("id", desc=True)
@@ -47,7 +49,8 @@ class handler(BaseHTTPRequestHandler):
                 print(
                     f"ID: {r['id']} | "
                     f"Title: {r.get('title')[:60] if r.get('title') else 'N/A'}... | "
-                    f"Audio URL: {r.get('audio_url')[:80] if r.get('audio_url') else 'MISSING'}"
+                    f"Audio URL: {r.get('audio_url')[:80] if r.get('audio_url') else 'MISSING'} | "
+                    f"Created At: {r.get('created_at')}"
                 )
             print("--- End Debug ---\n")
             # ====================================================
@@ -75,6 +78,18 @@ class handler(BaseHTTPRequestHandler):
 
                 length = "7200000"  # placeholder
 
+                # Use created_at for pubDate if available
+                created_at = row.get("created_at")
+                if created_at:
+                    try:
+                        # Supabase ISO timestamp ko RFC 822 mein convert
+                        dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                        pub_date = formatdate(timeval=dt.timestamp(), usegmt=True)
+                    except Exception:
+                        pub_date = current_date
+                else:
+                    pub_date = current_date
+
                 rss_items += f"""
 <item>
 <title>{title}</title>
@@ -85,8 +100,8 @@ class handler(BaseHTTPRequestHandler):
     length="{length}" 
     type="audio/mpeg"
 />
-<guid>{audio_url}</guid>
-<pubDate>{current_date}</pubDate>
+<guid isPermaLink="false">episode-{row['id']}</guid>
+<pubDate>{pub_date}</pubDate>
 <itunes:summary>{description}</itunes:summary>
 </item>
 """
@@ -117,7 +132,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(rss_feed.encode("utf-8"))
 
         except Exception as e:
-            print("ERROR in RSS handler:", str(e))  # extra error logging
+            print("ERROR in RSS handler:", str(e))
             self.send_response(500)
             self.send_header("Content-type", "text/plain")
             self.end_headers()
