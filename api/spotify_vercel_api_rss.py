@@ -26,7 +26,11 @@ class handler(BaseHTTPRequestHandler):
                     spotify_description,
                     audio_url,
                     is_audio_generated,
-                    created_at
+                    created_at,
+                    audio_duration,
+                    audio_duration_seconds,
+                    audio_file_size,
+                    episode_pub_date
                 """)
                 .eq("is_audio_generated", True)
                 .order("id", desc=True)
@@ -34,7 +38,7 @@ class handler(BaseHTTPRequestHandler):
                 .execute()
             )
 
-            # Original filtering
+            # Filter rows that actually have audio
             rows = [ 
                 row for row in data.data
                 if row.get("audio_url")
@@ -50,7 +54,9 @@ class handler(BaseHTTPRequestHandler):
                     f"ID: {r['id']} | "
                     f"Title: {r.get('title')[:60] if r.get('title') else 'N/A'}... | "
                     f"Audio URL: {r.get('audio_url')[:80] if r.get('audio_url') else 'MISSING'} | "
-                    f"Created At: {r.get('created_at')}"
+                    f"File Size: {r.get('audio_file_size')} | "
+                    f"Duration: {r.get('audio_duration')} | "
+                    f"Episode Pub Date: {r.get('episode_pub_date')}"
                 )
             print("--- End Debug ---\n")
             # ====================================================
@@ -76,19 +82,35 @@ class handler(BaseHTTPRequestHandler):
                 # Clean URL (remove query params)
                 audio_url = audio_url.split("?")[0]
 
-                length = "7200000"  # placeholder
+                # ==================== DYNAMIC METADATA ====================
 
-                # Use created_at for pubDate if available
-                created_at = row.get("created_at")
-                if created_at:
+                # 1. Enclosure length (file size in bytes)
+                length = str(row.get("audio_file_size") or 0)
+
+                # 2. Publication Date (prefer episode_pub_date)
+                if row.get("episode_pub_date"):
                     try:
-                        # Supabase ISO timestamp ko RFC 822 mein convert
-                        dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+                        dt = datetime.fromisoformat(
+                            row["episode_pub_date"].replace("Z", "+00:00")
+                        )
+                        pub_date = formatdate(timeval=dt.timestamp(), usegmt=True)
+                    except Exception:
+                        pub_date = current_date
+                elif row.get("created_at"):
+                    try:
+                        dt = datetime.fromisoformat(
+                            row["created_at"].replace("Z", "+00:00")
+                        )
                         pub_date = formatdate(timeval=dt.timestamp(), usegmt=True)
                     except Exception:
                         pub_date = current_date
                 else:
                     pub_date = current_date
+
+                # 3. iTunes Duration
+                duration = row.get("audio_duration") or "00:00:00"
+
+                # =======================================================
 
                 rss_items += f"""
 <item>
@@ -102,6 +124,7 @@ class handler(BaseHTTPRequestHandler):
 />
 <guid isPermaLink="false">episode-{row['id']}</guid>
 <pubDate>{pub_date}</pubDate>
+<itunes:duration>{duration}</itunes:duration>
 <itunes:summary>{description}</itunes:summary>
 </item>
 """
@@ -121,7 +144,7 @@ class handler(BaseHTTPRequestHandler):
     <itunes:name>Auto Intel</itunes:name>
     <itunes:email>personamize.ai@gmail.com</itunes:email>
 </itunes:owner>
-<itunes:image href="https://oklpimfespctlovlijzn.supabase.co/storage/v1/object/public/spotify-apple-podcast-bg-image/cover.jpg"/>
+<itunes:image href="https://oklpimfespctlovlijzn.supabase.co/storage/v1/object/public/spotify-apple-podcast-bg-image/cover.png"/>
 <lastBuildDate>{current_date}</lastBuildDate>
 
 {rss_items}
@@ -140,4 +163,4 @@ class handler(BaseHTTPRequestHandler):
             self.send_response(500)
             self.send_header("Content-type", "text/plain")
             self.end_headers()
-            self.wfile.write(str(e).encode())
+            self.wfile.write(str(e).encode("utf-8"))
