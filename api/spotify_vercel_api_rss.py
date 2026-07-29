@@ -133,7 +133,7 @@ class handler(BaseHTTPRequestHandler):
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
 <channel>
 <title>Auto Intel Daily</title>
-<link>https://spotify-apple-podcast-rss.vercel.app/</link>
+<link>https://spotify-apple-podcast-rss-nu.vercel.app/</link>
 <description>AI powered automotive news podcast</description>
 <language>en-us</language>
 <itunes:type>episodic</itunes:type>
